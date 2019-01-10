@@ -1,0 +1,42 @@
+version: '3'
+services:
+
+  server:
+    image: postgrest/postgrest
+    ports:
+      - "3000:3000"
+    links:
+      - db:db
+    environment:
+      PGRST_DB_URI: postgres://dbuser:password@db:5432/compup
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon #In production this role should not be the same as the one used for the connection
+      PGRST_JWT_SECRET: "4e5e90c6228fd48698d074241c2ba7605"
+    depends_on:
+      - db
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: compup
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: password
+
+  flyway:
+    image: boxfuse/flyway
+    command: -url=jdbc:postgresql://db:5432/compup -user=dbuser -password=password migrate
+    volumes:
+      - ./migrations:/flyway/sql
+    depends_on:
+      - db
+
+      
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    environment:
+      API_URL: http://localhost:3000/
